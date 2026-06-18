@@ -4,61 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Http\Responses\ApiResponse;
 use App\Models\Member;
+use App\Services\RabbitMQService;
+use App\Services\SoapService;
+use App\Services\SsoService;
 use Illuminate\Http\Request;
-
 
 class MemberController extends Controller
 {
-    /**
-     * @OA\Get(
-     *     path="/api/v1/members/{id}",
-     *     summary="Get member by ID",
-     *     tags={"Members"},
-     *     security={{"ApiKeyAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Member ID",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Member retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Member retrieved successfully"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="Veraldo"),
-     *                 @OA\Property(property="email", type="string", example="veraldo@email.com"),
-     *                 @OA\Property(property="phone", type="string", example="08123456789"),
-     *                 @OA\Property(property="status", type="string", example="active"),
-     *                 @OA\Property(property="joined_at", type="string", example="2026-01-01"),
-     *                 @OA\Property(property="expired_at", type="string", example="2027-01-01")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Member not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Member not found"),
-     *             @OA\Property(property="errors", type="null")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="API Key missing",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="API Key missing"),
-     *             @OA\Property(property="errors", type="null")
-     *         )
-     *     )
-     * )
-     */
+    protected SoapService $soapService;
+    protected SsoService $ssoService;
+    protected RabbitMQService $rabbitMQService;
+
+    public function __construct(SoapService $soapService, SsoService $ssoService, RabbitMQService $rabbitMQService)
+    {
+        $this->soapService     = $soapService;
+        $this->ssoService      = $ssoService;
+        $this->rabbitMQService = $rabbitMQService;
+    }
+
     public function show($id)
     {
         $member = Member::find($id);
@@ -70,51 +33,6 @@ class MemberController extends Controller
         return ApiResponse::success($member, 'Member retrieved successfully');
     }
 
-    /**
-     * @OA\Get(
-     *     path="/api/v1/members/{id}/status",
-     *     summary="Get member status",
-     *     tags={"Members"},
-     *     security={{"ApiKeyAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Member ID",
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Member status retrieved successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Member status retrieved successfully"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="status", type="string", example="active")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Member not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Member not found"),
-     *             @OA\Property(property="errors", type="null")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="API Key missing",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="API Key missing"),
-     *             @OA\Property(property="errors", type="null")
-     *         )
-     *     )
-     * )
-     */
     public function status($id)
     {
         $member = Member::find($id);
@@ -129,52 +47,6 @@ class MemberController extends Controller
         ], 'Member status retrieved successfully');
     }
 
-    /**
-     * @OA\Post(
-     *     path="/api/v1/members",
-     *     summary="Create new member",
-     *     tags={"Members"},
-     *     security={{"ApiKeyAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"name","email"},
-     *             @OA\Property(property="name", type="string", example="Veraldo"),
-     *             @OA\Property(property="email", type="string", example="veraldo@email.com"),
-     *             @OA\Property(property="phone", type="string", example="08123456789"),
-     *             @OA\Property(property="status", type="string", example="active"),
-     *             @OA\Property(property="joined_at", type="string", example="2026-01-01"),
-     *             @OA\Property(property="expired_at", type="string", example="2027-01-01")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Member created successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Member created successfully"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="Veraldo"),
-     *                 @OA\Property(property="email", type="string", example="veraldo@email.com"),
-     *                 @OA\Property(property="phone", type="string", example="08123456789"),
-     *                 @OA\Property(property="status", type="string", example="active"),
-     *                 @OA\Property(property="joined_at", type="string", example="2026-01-01"),
-     *                 @OA\Property(property="expired_at", type="string", example="2027-01-01")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="API Key missing",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="API Key missing"),
-     *             @OA\Property(property="errors", type="null")
-     *         )
-     *     )
-     * )
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -186,8 +58,49 @@ class MemberController extends Controller
             'expired_at' => 'nullable|date',
         ]);
 
+        // Simpan member
         $member = Member::create($validated);
 
-        return ApiResponse::success($member, 'Member created successfully', null, 201);
+        // Ambil M2M token untuk SOAP
+        $token = $this->ssoService->getM2MToken();
+
+        // Kirim audit ke SOAP
+        $soapResult = $this->soapService->sendAudit(
+            'MemberRegistered',
+            [
+                'member_id' => $member->id,
+                'name'      => $member->name,
+                'email'     => $member->email,
+                'status'    => $member->status,
+            ],
+            $token
+        );
+
+        // Simpan receipt number
+        $member->update(['receipt_number' => $soapResult['receipt_number']]);
+
+        // Publish event ke RabbitMQ
+        $published = $this->rabbitMQService->publish(
+            'member.registered',
+            [
+                'event'     => 'member.registered',
+                'service'   => 'Keanggotaan-Service',
+                'data'      => [
+                    'member_id' => $member->id,
+                    'name'      => $member->name,
+                    'email'     => $member->email,
+                    'status'    => $member->status,
+                ],
+                'timestamp' => now()->toISOString(),
+            ],
+            $token
+        );
+
+        return ApiResponse::success([
+            'member'           => $member,
+            'receipt_number'   => $soapResult['receipt_number'],
+            'soap_status'      => $soapResult['status'],
+            'rabbitmq_published' => $published,
+        ], 'Member created successfully', null, 201);
     }
 }
