@@ -13,11 +13,12 @@ class SsoService
 
     public function getM2MToken(): string
     {
-        $response = Http::post("{$this->ssoUrl}/api/v1/auth/token", [
-            'api_key' => $this->apiKey,
-        ]);
+    $response = Http::post("{$this->ssoUrl}/api/v1/auth/token", [
+        'api_key' => $this->apiKey,
+        'nim'     => '102022400180',
+    ]);
 
-        return $response->json('token');
+    return $response->json('token');
     }
 
     public function getUserToken(string $email, string $password): string
